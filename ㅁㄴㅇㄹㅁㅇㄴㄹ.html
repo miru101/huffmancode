@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>허프만 트리 시뮬레이터</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .node-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+    .node { border: 1px solid #ccc; padding: 10px; cursor: pointer; border-radius: 5px; background: #f9f9f9; user-select:none; }
+    .node.selected { background-color: #b3e5fc; }
+    #tree-log { background: #eee; padding: 10px; white-space: pre-wrap; margin-top: 20px; border-radius: 5px; max-height: 150px; overflow-y: auto; }
+    svg { border: 1px solid #ccc; background: #fff; margin-top: 20px; width: 100%; height: 400px; }
+    table { border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 5px 10px; text-align: center; }
+    input.freq-input { width: 50px; text-align: center; }
+    button { margin: 5px 10px 5px 0; }
+  </style>
+</head>
+<body>
+  <h1>🌲 허프만 트리 시뮬레이터</h1>
+  <p>랜덤 문자열을 보고 문자 빈도를 직접 입력하고 검증한 후 노드 병합을 시작하세요.</p>
+
+  <div><strong>랜덤 문자열:</strong> <span id="random-string"></span></div>
+
+  <h3>📊 문자 빈도 입력 및 검증</h3>
+  <table id="freq-table">
+    <thead>
+      <tr><th>문자</th><th>빈도 입력</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <button onclick="checkFrequencies()">빈도수 검증 및 노드 생성</button>
+
+  <h3>🟢 병합 가능한 노드</h3>
+  <div id="node-container" class="node-list"></div>
+
+  <button onclick="submitTree()">제출</button>
+  <button onclick="init()">재시작</button>
+
+  <h3>🧾 병합 기록</h3>
+  <div id="tree-log"></div>
+
+  <h3>🌐 트리 시각화</h3>
+  <svg id="tree-svg"></svg>
+
+  <h3>📦 허프만 코드 및 압축률</h3>
+  <pre id="result-output"></pre>
+
+  <script>
+    const charset = "ABCDE";
+    let nodes = [];
+    let selectedNodes = [];
+    let treeLog = [];
+    let originalString = "";
+    let freq = {};
+    let trueTree = null;
+
+    function generateRandomString(length = 20) {
+      let result = "";
+      for (let i = 0; i < length; i++) {
+        result += charset[Math.floor(Math.random() * charset.length)];
+      }
+      return result;
+    }
+
+    function getFrequencies(str) {
+      const freq = {};
+      for (const ch of str) freq[ch] = (freq[ch] || 0) + 1;
+      return freq;
+    }
+
+    function renderFreqTable(freq) {
+      const tbody = document.querySelector("#freq-table tbody");
+      tbody.innerHTML = "";
+      Object.entries(freq).forEach(([char]) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${char}</td>
+          <td><input type="number" min="0" class="freq-input" id="freq-${char}" value="0" /></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function checkFrequencies() {
+      let correct = true;
+      for (const char in freq) {
+        const val = parseInt(document.getElementById(`freq-${char}`).value, 10);
+        if (val !== freq[char]) {
+          correct = false;
+          break;
+        }
+      }
+      if (!correct) {
+        alert("빈도수가 일치하지 않습니다. 다시 입력해주세요.");
+        return;
+      }
+      alert("빈도수가 정확합니다! 노드를 생성합니다.");
+      nodes = createInitialNodes(freq);
+      treeLog = [];
+      selectedNodes = [];
+      document.getElementById("tree-log").textContent = "";
+      document.getElementById("result-output").textContent = "";
+      document.getElementById("tree-svg").innerHTML = "";
+      renderNodes();
+    }
+
+    function createInitialNodes(freq) {
+      return Object.entries(freq).map(([char, count]) => ({
+        label: char,
+        count,
+        id: char + Math.random().toString(36).substr(2, 5),
+        children: [],
+        x: 0,
+        y: 0
+      }));
+    }
+
+    function renderNodes() {
+      const container = document.getElementById("node-container");
+      container.innerHTML = "";
+      nodes.forEach(node => {
+        const div = document.createElement("div");
+        div.className = "node" + (selectedNodes.includes(node) ? " selected" : "");
+        div.textContent = `${node.label} (${node.count})`;
+        div.onclick = () => selectNode(node);
+        container.appendChild(div);
+      });
+    }
+
+    function selectNode(node) {
+      if (selectedNodes.includes(node)) {
+        selectedNodes = selectedNodes.filter(n => n !== node);
+      } else if (selectedNodes.length < 2) {
+        selectedNodes.push(node);
+      }
+      if (selectedNodes.length === 2) {
+        mergeSelectedNodes();
+      }
+      renderNodes();
+    }
+
+    function mergeSelectedNodes() {
+      const [a, b] = selectedNodes;
+      const newNode = {
+        label: a.label + b.label,
+        count: a.count + b.count,
+        id: a.id + b.id,
+        children: [a, b]
+      };
+      nodes = nodes.filter(n => n !== a && n !== b);
+      nodes.push(newNode);
+      treeLog.push(`병합: ${a.label}(${a.count}) + ${b.label}(${b.count}) → ${newNode.label}(${newNode.count})`);
+      selectedNodes = [];
+      renderNodes();
+      renderLog();
+      drawTree(newNode);
+    }
+
+    function renderLog() {
+      document.getElementById("tree-log").textContent = treeLog.join("\n");
+    }
+
+    function buildHuffmanTree(freq) {
+      let pq = Object.entries(freq).map(([char, count]) => ({ label: char, count, children: [] }));
+      while (pq.length > 1) {
+        pq.sort((a,b)=>a.count - b.count);
+        const a = pq.shift();
+        const b = pq.shift();
+        pq.push({
+          label: a.label + b.label,
+          count: a.count + b.count,
+          children: [a, b]
+        });
+      }
+      return pq[0];
+    }
+
+    function getCodes(node, path = "", result = {}) {
+      if (!node.children || node.children.length === 0) {
+        result[node.label] = path;
+      } else {
+        getCodes(node.children[0], path + "0", result);
+        getCodes(node.children[1], path + "1", result);
+      }
+      return result;
+    }
+
+    function getEncodedLength(codes, str) {
+      return str.split("").reduce((sum, ch) => sum + (codes[ch]?.length || 0), 0);
+    }
+
+    function submitTree() {
+      if (nodes.length !== 1) {
+        alert("병합이 완료되지 않았습니다.");
+        return;
+      }
+      const userTree = nodes[0];
+      const userCodes = getCodes(userTree);
+      const correctCodes = getCodes(trueTree);
+
+      let resultText = "[📦 허프만 코드]\n";
+      for (const ch of Object.keys(correctCodes).sort()) {
+        resultText += `${ch}: 당신=${userCodes[ch] || "없음"}, 정답=${correctCodes[ch]}\n`;
+      }
+
+      const originalBits = originalString.length * 8;
+      const userBits = getEncodedLength(userCodes, originalString);
+      const compressRate = ((userBits / originalBits) * 100).toFixed(2);
+
+      resultText += `\n원본 비트 수: ${originalBits}\n압축 후 비트 수: ${userBits}\n압축률: ${compressRate}%`;
+
+      document.getElementById("result-output").textContent = resultText;
+    }
+
+    // 트리 좌표 할당 및 SVG 그리기
+    function drawTree(root) {
+      const svg = document.getElementById("tree-svg");
+      svg.innerHTML = "";
+
+      let index = 0;
+      function setPosition(node, depth) {
+        if (!node.children.length) {
+          node.x = 100 + index * 80;
+          node.y = depth * 80 + 20;
+          index++;
+        } else {
+          setPosition(node.children[0], depth + 1);
+          setPosition(node.children[1], depth + 1);
+          node.x = (node.children[0].x + node.children[1].x) / 2;
+          node.y = depth * 80 + 20;
+        }
+      }
+      setPosition(root, 0);
+
+      function drawNode(node) {
+        if (node.children.length) {
+          node.children.forEach(child => {
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", node.x);
+            line.setAttribute("y1", node.y + 15);
+            line.setAttribute("x2", child.x);
+            line.setAttribute("y2", child.y - 15);
+            line.setAttribute("stroke", "black");
+            svg.appendChild(line);
+            drawNode(child);
+          });
+        }
+        // 노드 원과 텍스트
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", node.x);
+        circle.setAttribute("cy", node.y);
+        circle.setAttribute("r", 15);
+        circle.setAttribute("fill", "#90caf9");
+        circle.setAttribute("stroke", "#42a5f5");
+        svg.appendChild(circle);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", node.x);
+        text.setAttribute("y", node.y + 5);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute("font-size", "12");
+        text.setAttribute("font-weight", "bold");
+
+        // 부모노드는 숫자만, 자식노드는 문자만 보여주기
+        if (node.children.length > 0) {
+          // 부모노드: 숫자만 표시
+          text.textContent = `${node.count}`;
+        } else {
+          // 리프노드(자식노드): 문자만 표시
+          text.textContent = `${node.label}`;
+        }
+
+        svg.appendChild(text);
+      }
+      drawNode(root);
+    }
+
+    // 초기화 (재시작 포함)
+    function init() {
+      originalString = generateRandomString();
+      document.getElementById("random-string").textContent = originalString;
+      freq = getFrequencies(originalString);
+      renderFreqTable(freq);
+      nodes = [];
+      selectedNodes = [];
+      treeLog = [];
+      trueTree = buildHuffmanTree(freq);
+      document.getElementById("node-container").innerHTML = "";
+      document.getElementById("tree-log").textContent = "";
+      document.getElementById("tree-svg").innerHTML = "";
+      document.getElementById("result-output").textContent = "";
+    }
+
+    // 페이지 로드 시 초기화
+    window.onload = init;
+  </script>
+</body>
+</html>
