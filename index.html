@@ -43,7 +43,7 @@
   <h3>🌐 시각화</h3>
   <svg id="tree-svg"></svg>
 
-  <h3>📦 허프만 코드 및 압축률</h3>
+  <h3>📦 압축된거 및 압축률</h3>
   <pre id="result-output"></pre>
 
   <script>
@@ -70,18 +70,21 @@
     }
 
     function renderFreqTable(freq) {
-      const tbody = document.querySelector("#freq-table tbody");
-      tbody.innerHTML = "";
-      Object.entries(freq).forEach(([char]) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${char}</td>
-          <td><input type="number" min="0" class="freq-input" id="freq-${char}" value="0" /></td>
-        `;
-        tbody.appendChild(tr);
-      });
-    }
+  const tbody = document.querySelector("#freq-table tbody");
+  tbody.innerHTML = "";
 
+  // 알파벳 순으로 정렬
+  const sortedEntries = Object.entries(freq).sort((a, b) => a[0].localeCompare(b[0]));
+
+  sortedEntries.forEach(([char]) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${char}</td>
+      <td><input type="number" min="0" class="freq-input" id="freq-${char}" value="0" /></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
     function checkFrequencies() {
       let correct = true;
       for (const char in freq) {
