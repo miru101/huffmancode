@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>허프만 트리 시뮬레이터</title>
+  <title>허프만압축 연습기</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     .node-list { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
@@ -17,12 +17,12 @@
   </style>
 </head>
 <body>
-  <h1>🌲 허프만 트리 시뮬레이터</h1>
-  <p>랜덤 문자열을 보고 문자 빈도를 직접 입력하고 검증한 후 노드 병합을 시작하세요.</p>
+  <h1>🌲</h1>
+  <p>문자열을 보고 문자의 빈도수를 입력하고 검증한 후 노드 병합을 시작하세요.</p>
 
   <div><strong>랜덤 문자열:</strong> <span id="random-string"></span></div>
 
-  <h3>📊 문자 빈도 입력 및 검증</h3>
+  <h3>📊 문자 빈도수 표</h3>
   <table id="freq-table">
     <thead>
       <tr><th>문자</th><th>빈도 입력</th></tr>
@@ -31,16 +31,16 @@
   </table>
   <button onclick="checkFrequencies()">빈도수 검증 및 노드 생성</button>
 
-  <h3>🟢 병합 가능한 노드</h3>
+  <h3>🟢 병합가능노드</h3>
   <div id="node-container" class="node-list"></div>
 
   <button onclick="submitTree()">제출</button>
   <button onclick="init()">재시작</button>
 
-  <h3>🧾 병합 기록</h3>
+  <h3>🧾 병합기록</h3>
   <div id="tree-log"></div>
 
-  <h3>🌐 트리 시각화</h3>
+  <h3>🌐 시각화</h3>
   <svg id="tree-svg"></svg>
 
   <h3>📦 허프만 코드 및 압축률</h3>
