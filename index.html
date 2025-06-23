@@ -161,21 +161,21 @@
       document.getElementById("tree-log").textContent = treeLog.join("\n");
     }
 
-    function buildHuffmanTree(freq) {
-      let pq = Object.entries(freq).map(([char, count]) => ({ label: char, count, children: [] }));
-      while (pq.length > 1) {
-        pq.sort((a,b)=>a.count - b.count);
-        const a = pq.shift();
-        const b = pq.shift();
-        pq.push({
-          label: a.label + b.label,
-          count: a.count + b.count,
-          children: [a, b]
-        });
-      }
-      return pq[0];
-    }
-
+    let pq = Object.entries(freq).map(([char, count], index) => ({ label: char, count, children: [], order: index }));
+while (pq.length > 1) {
+  pq.sort((a, b) => {
+    if (a.count !== b.count) return a.count - b.count;
+    return a.order - b.order; // 빈도 같을 경우, 입력 순서 기준
+  });
+  const a = pq.shift();
+  const b = pq.shift();
+  pq.push({
+    label: a.label + b.label,
+    count: a.count + b.count,
+    children: [a, b],
+    order: Math.min(a.order, b.order) // 새 노드도 낮은 순서 유지
+  });
+}
     function getCodes(node, path = "", result = {}) {
       if (!node.children || node.children.length === 0) {
         result[node.label] = path;
